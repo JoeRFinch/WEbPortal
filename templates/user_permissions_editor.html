@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h2>Edit Permissions: {{ user.username }}</h2>
+        <p style="color: #7f8c8d;">
+            Primary Role: <span class="role-badge role-{{ user.role }}">{{ user.role.title() }}</span>
+        </p>
+    </div>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Back to Users</a>
+</div>
+
+<div class="card" style="background-color: #e8f4f8; border-left: 4px solid #3498db;">
+    <p><strong>ℹ️ About Permissions:</strong> Customize what this user can access and do in the system. Changes take effect immediately after saving.</p>
+</div>
+
+<form method="POST" action="{{ url_for('edit_user_permissions', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>Permission Settings</h3>
+            <button type="button" onclick="resetToDefaults()" class="btn btn-secondary">Reset to Role Defaults</button>
+        </div>
+        
+        <!-- Dashboard & General -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">📊 Dashboard & General Access</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_dashboard" {% if permissions.view_dashboard %}checked{% endif %}>
+                    <span>View Dashboard</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="add_staff_notes" {% if permissions.add_staff_notes %}checked{% endif %}>
+                    <span>Add Staff Notes</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="view_staff_notes" {% if permissions.view_staff_notes %}checked{% endif %}>
+                    <span>View All Staff Notes</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Animals -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 0.5rem;">🐾 Animal Management</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_animals" {% if permissions.view_animals %}checked{% endif %}>
+                    <span>View Animals</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="edit_animals" {% if permissions.edit_animals %}checked{% endif %}>
+                    <span>Edit Animals</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="add_animals" {% if permissions.add_animals %}checked{% endif %}>
+                    <span>Add New Animals</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Checklists -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #9b59b6; padding-bottom: 0.5rem;">✅ Checklists</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_checklists" {% if permissions.view_checklists %}checked{% endif %}>
+                    <span>View Checklists</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="complete_checklists" {% if permissions.complete_checklists %}checked{% endif %}>
+                    <span>Complete Checklists</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="manage_checklists" {% if permissions.manage_checklists %}checked{% endif %}>
+                    <span>Manage Checklists (Create/Edit)</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Time Clock -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">🕐 Time Clock</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_time_clock" {% if permissions.view_time_clock %}checked{% endif %}>
+                    <span>View Time Clock</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="use_time_clock" {% if permissions.use_time_clock %}checked{% endif %}>
+                    <span>Use Time Clock (Clock In/Out)</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="view_all_time_entries" {% if permissions.view_all_time_entries %}checked{% endif %}>
+                    <span>View All Users' Time Entries</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Logs -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #f39c12; padding-bottom: 0.5rem;">📝 Logs & Records</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_phone_logs" {% if permissions.view_phone_logs %}checked{% endif %}>
+                    <span>View Phone Logs</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="edit_phone_logs" {% if permissions.edit_phone_logs %}checked{% endif %}>
+                    <span>Edit Phone Logs</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="view_donations" {% if permissions.view_donations %}checked{% endif %}>
+                    <span>View Donations</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="edit_donations" {% if permissions.edit_donations %}checked{% endif %}>
+                    <span>Edit Donations</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="view_items_out" {% if permissions.view_items_out %}checked{% endif %}>
+                    <span>View Items Out</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="edit_items_out" {% if permissions.edit_items_out %}checked{% endif %}>
+                    <span>Edit Items Out</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Maintenance -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 0.5rem;">🔧 Maintenance</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="view_maintenance" {% if permissions.view_maintenance %}checked{% endif %}>
+                    <span>View Maintenance Tickets</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="manage_maintenance" {% if permissions.manage_maintenance %}checked{% endif %}>
+                    <span>Manage Maintenance Tickets</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Administrative -->
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 0.5rem;">⚙️ Administrative Functions</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <label class="permission-item">
+                    <input type="checkbox" name="manage_users" {% if permissions.manage_users %}checked{% endif %}>
+                    <span>Manage Users</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="manage_locations" {% if permissions.manage_locations %}checked{% endif %}>
+                    <span>Manage Facility Locations</span>
+                </label>
+                <label class="permission-item">
+                    <input type="checkbox" name="view_audit_log" {% if permissions.view_audit_log %}checked{% endif %}>
+                    <span>View Audit Log</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Permissions</button>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+function resetToDefaults() {
+    if (confirm('Reset all permissions to default values for the {{ user.role }} role?')) {
+        document.getElementById('resetForm').submit();
+    }
+}
+</script>
+
+<form id="resetForm" method="POST" action="{{ url_for('reset_user_permissions', user_id=user.id) }}" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<style>
+.permission-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.permission-item:hover {
+    background-color: #e9ecef;
+}
+
+.permission-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.75rem;
+    cursor: pointer;
+}
+
+.permission-item span {
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+h4 {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}

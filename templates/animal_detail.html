@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>{{ animal.name }}</h2>
+    <div>
+        <a href="{{ url_for('animal_edit', id=animal.id) }}" class="btn btn-primary">Edit</a>
+        <a href="{{ url_for('animals') }}" class="btn btn-secondary">Back to Animals</a>
+    </div>
+</div>
+
+<div class="animal-detail">
+    <div class="card">
+        <h3>Basic Information</h3>
+        <p><strong>Species:</strong> {{ animal.species or 'Not specified' }}</p>
+        <p><strong>Breed:</strong> {{ animal.breed or 'Not specified' }}</p>
+        <p><strong>Age:</strong> {{ animal.age or 'Unknown' }}</p>
+        <p><strong>Sex:</strong> {{ animal.sex or 'Unknown' }}</p>
+        <p><strong>Status:</strong> 
+            <span class="status-badge status-{{ animal.status }}">
+                {{ animal.status.replace('_', ' ').title() }}
+            </span>
+        </p>
+    </div>
+    
+    <div class="card">
+        <h3>Intake Information</h3>
+        <p><strong>Intake Date:</strong> {{ animal.intake_date.strftime('%B %d, %Y') }}</p>
+        <p><strong>Reason:</strong> {{ animal.intake_reason or 'Not provided' }}</p>
+        <p><strong>Location:</strong> {{ animal.location or 'Not assigned' }}</p>
+    </div>
+    
+    <div class="card">
+        <h3>Medical Notes</h3>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">
+            {{ animal.medical_notes or 'No medical notes' }}
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Behavioral Notes</h3>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">
+            {{ animal.behavioral_notes or 'No behavioral notes' }}
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Special Needs</h3>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">
+            {{ animal.special_needs or 'No special needs' }}
+        </div>
+    </div>
+    
+    {% if animal.status == 'adopted' %}
+    <div class="card" style="border-left: 3px solid #27ae60;">
+        <h3>Adoption Information</h3>
+        <p><strong>Adopted Date:</strong> {{ animal.adopted_date.strftime('%B %d, %Y') if animal.adopted_date else 'N/A' }}</p>
+        <p><strong>Adopter:</strong> {{ animal.adopter_name or 'Not provided' }}</p>
+        <p><strong>Contact:</strong> {{ animal.adopter_contact or 'Not provided' }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.status-available {
+    background-color: #d4edda;
+    color: #155724;
+}
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.status-adopted {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.status-foster {
+    background-color: #e7d5ff;
+    color: #5a1e8a;
+}
+.status-medical_hold, .status-transferred {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}

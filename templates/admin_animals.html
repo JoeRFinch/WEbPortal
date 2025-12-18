@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add New Animal</h2>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="name">Name *</label>
+        <input type="text" id="name" name="name" required class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="species">Species</label>
+        <input type="text" id="species" name="species" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="breed">Breed</label>
+        <input type="text" id="breed" name="breed" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="age">Age</label>
+        <input type="text" id="age" name="age" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="sex">Sex</label>
+        <select id="sex" name="sex" class="form-control">
+            <option value="">Unknown</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="intake_reason">Intake Reason</label>
+        <textarea id="intake_reason" name="intake_reason" class="form-control" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="location_id">Location in Facility</label>
+        <select id="location_id" name="location_id" class="form-control">
+            <option value="">Not Assigned</option>
+            {% for location in locations %}
+            <option value="{{ location.id }}" {{ 'disabled' if not location.active else '' }}>
+                {{ location.name }}
+                {% if not location.active %}(Inactive){% endif %}
+                {% if location.capacity %}
+                - {{ location.animal_count or 0 }}/{{ location.capacity }}
+                {% if location.animal_count and location.animal_count >= location.capacity %}(FULL){% endif %}
+                {% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="medical_notes">Medical Notes</label>
+        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="behavioral_notes">Behavioral Notes</label>
+        <textarea id="behavioral_notes" name="behavioral_notes" class="form-control" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="special_needs">Special Needs</label>
+        <textarea id="special_needs" name="special_needs" class="form-control" rows="2"></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">Add Animal</button>
+    <a href="{{ url_for('animals') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

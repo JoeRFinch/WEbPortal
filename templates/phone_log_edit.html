@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Phone Log</h2>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="caller_name">Caller Name</label>
+        <input type="text" id="caller_name" name="caller_name" value="{{ log.caller_name }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="caller_phone">Phone Number</label>
+        <input type="text" id="caller_phone" name="caller_phone" value="{{ log.caller_phone }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="issue">Issue/Reason for Call *</label>
+        <textarea id="issue" name="issue" required class="form-control" rows="4">{{ log.issue }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="action_taken">Action Taken</label>
+        <textarea id="action_taken" name="action_taken" class="form-control" rows="3">{{ log.action_taken }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="form-control">
+            <option value="open" {{ 'selected' if log.status == 'open' else '' }}>Open</option>
+            <option value="in_progress" {{ 'selected' if log.status == 'in_progress' else '' }}>In Progress</option>
+            <option value="resolved" {{ 'selected' if log.status == 'resolved' else '' }}>Resolved</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>
+            <input type="checkbox" name="follow_up_needed" {{ 'checked' if log.follow_up_needed else '' }}>
+            Follow-up needed
+        </label>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('phone_log_detail', id=log.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

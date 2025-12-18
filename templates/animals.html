@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>Animals</h2>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('admin_animals') }}" class="btn btn-primary">Add New Animal</a>
+    {% endif %}
+</div>
+
+<div style="margin-bottom: 1rem;">
+    <label>Filter by Status: </label>
+    <select onchange="window.location.href='{{ url_for('animals') }}?status=' + this.value" style="padding: 0.5rem;">
+        <option value="all" {{ 'selected' if status_filter == 'all' else '' }}>All</option>
+        <option value="available" {{ 'selected' if status_filter == 'available' else '' }}>Available</option>
+        <option value="pending" {{ 'selected' if status_filter == 'pending' else '' }}>Pending</option>
+        <option value="adopted" {{ 'selected' if status_filter == 'adopted' else '' }}>Adopted</option>
+        <option value="foster" {{ 'selected' if status_filter == 'foster' else '' }}>Foster</option>
+        <option value="medical_hold" {{ 'selected' if status_filter == 'medical_hold' else '' }}>Medical Hold</option>
+    </select>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Species</th>
+            <th>Breed</th>
+            <th>Intake Date</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for animal in pagination.items %}
+        <tr>
+            <td><strong>{{ animal.name }}</strong></td>
+            <td>{{ animal.species or '-' }}</td>
+            <td>{{ animal.breed or '-' }}</td>
+            <td>{{ animal.intake_date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ animal.location or '-' }}</td>
+            <td>
+                <span class="status-badge status-{{ animal.status }}">{{ animal.status.replace('_', ' ').title() }}</span>
+            </td>
+            <td>
+                <a href="{{ url_for('animal_detail', id=animal.id) }}" class="btn-small">View</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align: center;">No animals in system</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('animals', page=pagination.prev_num, status=status_filter) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('animals', page=pagination.next_num, status=status_filter) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.status-available {
+    background-color: #d4edda;
+    color: #155724;
+}
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.status-adopted {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.status-foster {
+    background-color: #e7d5ff;
+    color: #5a1e8a;
+}
+.status-medical_hold {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+.btn-small:hover {
+    background-color: #2980b9;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>Donation Details</h2>
+    <div>
+        <a href="{{ url_for('donation_edit', id=donation.id) }}" class="btn btn-primary">Edit</a>
+        <a href="{{ url_for('donations') }}" class="btn btn-secondary">Back to Donations</a>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <p><strong>Date Received:</strong> {{ donation.created_at.strftime('%B %d, %Y') }}</p>
+            <p><strong>Type:</strong> {{ donation.donation_type.title() }}</p>
+            <p><strong>Status:</strong> 
+                <span class="badge badge-success">{{ donation.status.upper() }}</span>
+            </p>
+            {% if donation.amount %}
+            <p><strong>Amount:</strong> ${{ '%.2f'|format(donation.amount) }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <p><strong>Donor Name:</strong> {{ donation.donor_name or 'Anonymous' }}</p>
+            <p><strong>Contact Info:</strong> {{ donation.donor_contact or 'Not provided' }}</p>
+            <p><strong>Logged By:</strong> {{ donation.creator.username if donation.creator else 'Unknown' }}</p>
+        </div>
+    </div>
+    
+    <hr>
+    
+    {% if donation.item_description %}
+    <div style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 0.5rem;">Item Description</h3>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">{{ donation.item_description }}</div>
+    </div>
+    {% endif %}
+    
+    {% if donation.notes %}
+    <div>
+        <h3 style="margin-bottom: 0.5rem;">Additional Notes</h3>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">{{ donation.notes }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>Items Outgoing</h2>
+    <button onclick="document.getElementById('itemForm').style.display='block'" class="btn btn-primary">Log Item Out</button>
+</div>
+
+<div id="itemForm" style="display:none;" class="card">
+    <h3>Log Item Out</h3>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="item_name">Item Name *</label>
+            <input type="text" id="item_name" name="item_name" required class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="number" id="quantity" name="quantity" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="reason">Reason</label>
+            <select id="reason" name="reason" class="form-control">
+                <option value="given_away">Given Away</option>
+                <option value="taken_home">Taken Home</option>
+                <option value="waste">Waste</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="recipient">Recipient/Person</label>
+            <input type="text" id="recipient" name="recipient" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="animal_id">Associated Animal (optional)</label>
+            <select id="animal_id" name="animal_id" class="form-control">
+                <option value="">None</option>
+                {% for animal in animals %}
+                <option value="{{ animal.id }}">{{ animal.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Save</button>
+        <button type="button" onclick="document.getElementById('itemForm').style.display='none'" class="btn btn-secondary">Cancel</button>
+    </form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Reason</th>
+            <th>Recipient</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in pagination.items %}
+        <tr>
+            <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.quantity or '-' }}</td>
+            <td>{{ item.reason.replace('_', ' ').title() }}</td>
+            <td>{{ item.recipient or '-' }}</td>
+            <td>{{ item.notes[:40] if item.notes else '-' }}{{ '...' if item.notes and item.notes|length > 40 else '' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align: center;">No items logged</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('items_out', page=pagination.prev_num) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('items_out', page=pagination.next_num) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

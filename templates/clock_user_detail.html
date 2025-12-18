@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h2>{{ user.username }}'s Time Entries</h2>
+        <p style="color: #7f8c8d; margin: 0.5rem 0;">
+            <span class="role-badge role-{{ user.role }}">{{ user.role.title() }}</span>
+        </p>
+    </div>
+    <a href="{{ url_for('clock_history') }}" class="btn btn-secondary">Back to Summary</a>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h3>Summary</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.875rem;">Total Hours</p>
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #2c3e50;">
+                {{ '%.2f'|format(total_hours) }} hrs
+            </p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.875rem;">Total Entries</p>
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #2c3e50;">
+                {{ pagination.total }}
+            </p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.875rem;">Email</p>
+            <p style="margin: 0; font-size: 1rem; color: #2c3e50;">
+                {{ user.email }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<h3>Detailed Time Entries</h3>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Hours Worked</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in pagination.items %}
+        <tr>
+            <td>{{ entry.clock_in.strftime('%Y-%m-%d %I:%M %p') }}</td>
+            <td>
+                {% if entry.clock_out %}
+                    {{ entry.clock_out.strftime('%Y-%m-%d %I:%M %p') }}
+                {% else %}
+                    <span style="color: #27ae60; font-weight: bold;">Currently Clocked In</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if entry.total_hours %}
+                    <strong>{{ '%.2f'|format(entry.total_hours) }} hrs</strong>
+                {% else %}
+                    <span style="color: #95a5a6;">-</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" style="text-align: center;">No time entries found for this user</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('clock_user_detail', user_id=user.id, page=pagination.prev_num) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('clock_user_detail', user_id=user.id, page=pagination.next_num) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+.role-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.role-admin {
+    background-color: #e7d5ff;
+    color: #5a1e8a;
+}
+.role-employee {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.role-volunteer {
+    background-color: #d4edda;
+    color: #155724;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

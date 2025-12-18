@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Manage Users</h2>
+
+<div class="card">
+    <h3>Create New User</h3>
+    <form method="POST" action="{{ url_for('admin_users') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="username">Username *</label>
+            <input type="text" id="username" name="username" required class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" required class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="password">Password *</label>
+            <input type="password" id="password" name="password" required class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="role">Primary Role *</label>
+            <select id="role" name="role" class="form-control">
+                <option value="volunteer">Volunteer</option>
+                <option value="employee">Employee/Staff</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="management">Management</option>
+                <option value="board">Board Member</option>
+                <option value="admin">Administrator</option>
+            </select>
+            <small style="color: #7f8c8d;">Primary role determines default permissions, which can be customized after creation.</small>
+        </div>
+        <button type="submit" class="btn btn-primary">Create User</button>
+    </form>
+</div>
+
+<h3>Existing Users</h3>
+
+<!-- Permission Warning -->
+{% if permission_warnings %}
+<div class="card" style="border-left: 4px solid #f39c12; background-color: #fff3cd;">
+    <h3 style="color: #856404;">⚠️ Permission Warnings</h3>
+    <ul>
+        {% for warning in permission_warnings %}
+        <li>{{ warning }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr style="{{ 'opacity: 0.6;' if not user.active else '' }}">
+            <td><strong>{{ user.username }}</strong></td>
+            <td>{{ user.email }}</td>
+            <td><span class="role-badge role-{{ user.role }}">{{ user.role.title() }}</span></td>
+            <td>
+                {% if user.active %}
+                <span style="color: #27ae60; font-weight: bold;">Active</span>
+                {% else %}
+                <span style="color: #e74c3c; font-weight: bold;">Inactive</span>
+                {% endif %}
+            </td>
+            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+            <td>
+                <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-small">Edit</a>
+                <a href="{{ url_for('edit_user_permissions', user_id=user.id) }}" class="btn-small" style="background-color: #9b59b6;">Permissions</a>
+                {% if user.id != current_user.id %}
+                <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if user.active %}
+                    <button type="submit" class="btn-small" style="background-color: #e74c3c;" onclick="return confirm('Deactivate this user?')">Deactivate</button>
+                    {% else %}
+                    <button type="submit" class="btn-small" style="background-color: #27ae60;">Activate</button>
+                    {% endif %}
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    margin-right: 0.25rem;
+}
+.btn-small:hover {
+    opacity: 0.9;
+}
+</style>
+{% endblock %}

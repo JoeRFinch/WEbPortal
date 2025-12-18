@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Time Clock - All Users Summary</h2>
+
+<p class="help-text">Click on any user to view their detailed time entries.</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Total Hours</th>
+            <th>Total Entries</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for summary in users_summary %}
+        <tr style="cursor: pointer;" onclick="window.location='{{ url_for('clock_user_detail', user_id=summary.id) }}'">
+            <td><strong>{{ summary.username }}</strong></td>
+            <td>
+                <span class="role-badge role-{{ summary.role }}">{{ summary.role.title() }}</span>
+            </td>
+            <td><strong>{{ '%.2f'|format(summary.total_hours if summary.total_hours else 0) }} hrs</strong></td>
+            <td>{{ summary.total_entries or 0 }}</td>
+            <td onclick="event.stopPropagation()">
+                <a href="{{ url_for('clock_user_detail', user_id=summary.id) }}" class="btn-small">View Details</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align: center;">No users in system</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 1.5rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+    <h3>Summary Statistics</h3>
+    <p><strong>Total Users:</strong> {{ users_summary|length }}</p>
+    <p><strong>Total Hours (All Users):</strong> 
+        {% set total = namespace(hours=0) %}
+        {% for summary in users_summary %}
+            {% set total.hours = total.hours + (summary.total_hours if summary.total_hours else 0) %}
+        {% endfor %}
+        {{ '%.2f'|format(total.hours) }} hours
+    </p>
+</div>
+
+<style>
+.role-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.role-admin {
+    background-color: #e7d5ff;
+    color: #5a1e8a;
+}
+.role-employee {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.role-volunteer {
+    background-color: #d4edda;
+    color: #155724;
+}
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+.btn-small:hover {
+    background-color: #2980b9;
+}
+</style>
+{% endblock %}

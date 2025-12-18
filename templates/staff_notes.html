@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Create Staff Communication Note</h2>
+
+<div class="card" style="background-color: #e8f4f8; border-left: 4px solid #3498db;">
+    <p><strong>ℹ️ About Staff Notes:</strong> Use this form to communicate important information to management. Your note will be visible to administrators, management, and board members.</p>
+</div>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="title">Subject/Title</label>
+        <input type="text" id="title" name="title" class="form-control" placeholder="Brief subject line">
+    </div>
+    
+    <div class="form-group">
+        <label for="content">Message *</label>
+        <textarea id="content" name="content" required class="form-control" rows="6" 
+                  placeholder="Describe the issue, suggestion, or information you want to communicate to management..."></textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority" class="form-control">
+            <option value="low">Low - FYI / Non-urgent</option>
+            <option value="normal" selected>Normal - Standard communication</option>
+            <option value="high">High - Needs attention soon</option>
+            <option value="urgent">Urgent - Immediate attention needed</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="category">Category</label>
+        <select id="category" name="category" class="form-control">
+            <option value="general">General</option>
+            <option value="animal_care">Animal Care</option>
+            <option value="facility">Facility/Building</option>
+            <option value="staff">Staff/Personnel</option>
+            <option value="supplies">Supplies/Inventory</option>
+            <option value="other">Other</option>
+        </select>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Submit Note</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>Recent Notes You've Submitted</h3>
+    {% if recent_notes %}
+    <ul class="list">
+        {% for note in recent_notes %}
+        <li>
+            <strong>{{ note.title or 'No subject' }}</strong>
+            <span style="font-size: 0.8rem; color: #7f8c8d;">
+                - {{ note.created_at.strftime('%b %d, %Y') }}
+                {% if note.is_read %}
+                <span style="color: #27ae60;">✓ Read</span>
+                {% else %}
+                <span style="color: #95a5a6;">Unread</span>
+                {% endif %}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color: #7f8c8d;">You haven't submitted any notes yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Manage Animal Locations</h2>
+
+<div class="card">
+    <h3>Add New Location</h3>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="name">Location Name *</label>
+            <input type="text" id="name" name="name" required class="form-control" placeholder="e.g., Cat Room 8, Kennel 1">
+        </div>
+        <div class="form-group">
+            <label for="location_type">Type</label>
+            <select id="location_type" name="location_type" class="form-control">
+                <option value="kennel">Kennel</option>
+                <option value="cat_room">Cat Room</option>
+                <option value="isolation">Isolation</option>
+                <option value="lobby">Lobby</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="capacity">Capacity (optional)</label>
+            <input type="number" id="capacity" name="capacity" class="form-control" placeholder="Maximum number of animals">
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Any additional information about this location"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Location</button>
+    </form>
+</div>
+
+<h3>Existing Locations</h3>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Capacity</th>
+            <th>Current Animals</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for location in locations %}
+        <tr style="{{ 'opacity: 0.6;' if not location.active else '' }}">
+            <td><strong>{{ location.name }}</strong></td>
+            <td>{{ location.location_type.replace('_', ' ').title() if location.location_type else '-' }}</td>
+            <td>{{ location.capacity if location.capacity else '-' }}</td>
+            <td>
+                <span style="font-weight: bold; {{ 'color: #e74c3c;' if location.capacity and location.animal_count >= location.capacity else '' }}">
+                    {{ location.animal_count }}
+                </span>
+                {% if location.capacity %}
+                    / {{ location.capacity }}
+                    {% if location.animal_count >= location.capacity %}
+                    <span style="color: #e74c3c; font-size: 0.8rem;">(FULL)</span>
+                    {% endif %}
+                {% endif %}
+            </td>
+            <td>
+                {% if location.active %}
+                <span style="color: #27ae60; font-weight: bold;">Active</span>
+                {% else %}
+                <span style="color: #e74c3c; font-weight: bold;">Inactive</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('edit_location', id=location.id) }}" class="btn-small">Edit</a>
+                <form method="POST" action="{{ url_for('toggle_location_status', id=location.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if location.active %}
+                    <button type="submit" class="btn-small" style="background-color: #e74c3c;" 
+                            onclick="return confirm('Deactivate this location? Animals cannot be assigned to inactive locations.')">
+                        Deactivate
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn-small" style="background-color: #27ae60;">Activate</button>
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align: center;">No locations found</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    margin-right: 0.25rem;
+}
+.btn-small:hover {
+    opacity: 0.9;
+}
+</style>
+{% endblock %}

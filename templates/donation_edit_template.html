@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Donation</h2>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="donor_name">Donor Name</label>
+        <input type="text" id="donor_name" name="donor_name" value="{{ donation.donor_name }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="donor_contact">Contact Info</label>
+        <input type="text" id="donor_contact" name="donor_contact" value="{{ donation.donor_contact }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="donation_type">Type</label>
+        <select id="donation_type" name="donation_type" class="form-control">
+            <option value="monetary" {{ 'selected' if donation.donation_type == 'monetary' else '' }}>Monetary</option>
+            <option value="item" {{ 'selected' if donation.donation_type == 'item' else '' }}>Item</option>
+            <option value="service" {{ 'selected' if donation.donation_type == 'service' else '' }}>Service</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="amount">Amount (if monetary)</label>
+        <input type="number" step="0.01" id="amount" name="amount" value="{{ donation.amount }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="item_description">Item Description</label>
+        <textarea id="item_description" name="item_description" class="form-control" rows="3">{{ donation.item_description }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="3">{{ donation.notes }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="form-control">
+            <option value="received" {{ 'selected' if donation.status == 'received' else '' }}>Received</option>
+            <option value="processed" {{ 'selected' if donation.status == 'processed' else '' }}>Processed</option>
+            <option value="thanked" {{ 'selected' if donation.status == 'thanked' else '' }}>Thank You Sent</option>
+        </select>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('donation_detail', id=donation.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

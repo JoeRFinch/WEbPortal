@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h2>Edit User: {{ user.username }}</h2>
+        <p style="color: #7f8c8d;">
+            Current Role: <span class="role-badge role-{{ user.role }}">{{ user.role.title() }}</span>
+        </p>
+    </div>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Back to Users</a>
+</div>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <h3>Basic Information</h3>
+    
+    <div class="form-group">
+        <label for="username">Username *</label>
+        <input type="text" id="username" name="username" value="{{ user.username }}" required class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" value="{{ user.email }}" required class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="role">Primary Role *</label>
+        <select id="role" name="role" class="form-control">
+            <option value="volunteer" {{ 'selected' if user.role == 'volunteer' else '' }}>Volunteer</option>
+            <option value="employee" {{ 'selected' if user.role == 'employee' else '' }}>Employee/Staff</option>
+            <option value="maintenance" {{ 'selected' if user.role == 'maintenance' else '' }}>Maintenance</option>
+            <option value="management" {{ 'selected' if user.role == 'management' else '' }}>Management</option>
+            <option value="board" {{ 'selected' if user.role == 'board' else '' }}>Board Member</option>
+            {% if current_user.role == 'admin' %}
+            <option value="admin" {{ 'selected' if user.role == 'admin' else '' }}>Administrator</option>
+            {% endif %}
+        </select>
+        <small style="color: #7f8c8d;">Changing role will reset permissions to that role's defaults</small>
+    </div>
+    
+    <hr style="margin: 2rem 0;">
+    
+    <h3>Reset Password</h3>
+    <p style="color: #7f8c8d; margin-bottom: 1rem;">Leave blank to keep current password</p>
+    
+    {% if user.role in ['admin', 'management', 'board'] %}
+    <div style="background-color: #fff3cd; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        <strong>Note:</strong> This user has a privileged role ({{ user.role.title() }}). Password must be at least 8 characters with uppercase, lowercase, and numbers.
+    </div>
+    {% else %}
+    <div style="background-color: #e8f4f8; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        <strong>Note:</strong> This user is {{ user.role.title() }}. Minimum 4 characters required.
+    </div>
+    {% endif %}
+    
+    <div class="form-group">
+        <label for="new_password">New Password</label>
+        <input type="password" id="new_password" name="new_password" class="form-control" minlength="4" autocomplete="new-password">
+        {% if user.role in ['admin', 'management', 'board'] %}
+        <small style="color: #7f8c8d;">Minimum 8 characters, mix of uppercase, lowercase, and numbers</small>
+        {% else %}
+        <small style="color: #7f8c8d;">Minimum 4 characters</small>
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="confirm_password">Confirm New Password</label>
+        <input type="password" id="confirm_password" name="confirm_password" class="form-control" minlength="4" autocomplete="new-password">
+    </div>
+    
+    <div id="password-feedback" style="margin-bottom: 1rem;"></div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+const newPassword = document.getElementById('new_password');
+const confirmPassword = document.getElementById('confirm_password');
+const feedbackDiv = document.getElementById('password-feedback');
+
+newPassword.addEventListener('input', validatePassword);
+confirmPassword.addEventListener('input', validatePassword);
+
+function validatePassword() {
+    const newPass = newPassword.value;
+    const confirmPass = confirmPassword.value;
+    const userRole = '{{ user.role }}';
+    
+    // Only validate if user has entered something
+    if (!newPass && !confirmPass) {
+        feedbackDiv.innerHTML = '';
+        confirmPassword.setCustomValidity('');
+        return;
+    }
+    
+    // Check if passwords match
+    if (newPass && confirmPass && newPass !== confirmPass) {
+        feedbackDiv.innerHTML = '<div style="color: #e74c3c; padding: 0.5rem; background-color: #fee; border-radius: 4px;">❌ Passwords do not match</div>';
+        confirmPassword.setCustomValidity('Passwords do not match');
+        return;
+    }
+    
+    // Check password strength based on role
+    if (newPass) {
+        let issues = [];
+        
+        // Basic requirement for all roles
+        if (newPass.length < 4) {
+            issues.push('at least 4 characters');
+        }
+        
+        // Additional requirements only for privileged roles
+        if (['admin', 'management', 'board'].includes(userRole)) {
+            if (newPass.length < 8) issues.push('at least 8 characters');
+            if (!/[a-z]/.test(newPass)) issues.push('one lowercase letter');
+            if (!/[A-Z]/.test(newPass)) issues.push('one uppercase letter');
+            if (!/[0-9]/.test(newPass)) issues.push('one number');
+        }
+        
+        if (issues.length > 0) {
+            feedbackDiv.innerHTML = `<div style="color: #f39c12; padding: 0.5rem; background-color: #fff8e1; border-radius: 4px;">⚠️ Password needs: ${issues.join(', ')}</div>`;
+        } else if (confirmPass && newPass === confirmPass) {
+            feedbackDiv.innerHTML = '<div style="color: #27ae60; padding: 0.5rem; background-color: #e8f5e9; border-radius: 4px;">✓ Password is valid and matches</div>';
+            confirmPassword.setCustomValidity('');
+        }
+    }
+}
+
+// Require confirm password if new password is entered
+newPassword.addEventListener('change', function() {
+    if (this.value) {
+        confirmPassword.required = true;
+    } else {
+        confirmPassword.required = false;
+    }
+});
+</script>
+{% endblock %}

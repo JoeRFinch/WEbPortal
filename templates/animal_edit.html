@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Animal: {{ animal.name }}</h2>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="name">Name *</label>
+        <input type="text" id="name" name="name" value="{{ animal.name }}" required class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="species">Species</label>
+        <input type="text" id="species" name="species" value="{{ animal.species }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="breed">Breed</label>
+        <input type="text" id="breed" name="breed" value="{{ animal.breed }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="age">Age</label>
+        <input type="text" id="age" name="age" value="{{ animal.age }}" class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="sex">Sex</label>
+        <select id="sex" name="sex" class="form-control">
+            <option value="">Unknown</option>
+            <option value="Male" {{ 'selected' if animal.sex == 'Male' else '' }}>Male</option>
+            <option value="Female" {{ 'selected' if animal.sex == 'Female' else '' }}>Female</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="form-control">
+            <option value="available" {{ 'selected' if animal.status == 'available' else '' }}>Available</option>
+            <option value="pending" {{ 'selected' if animal.status == 'pending' else '' }}>Pending Adoption</option>
+            <option value="adopted" {{ 'selected' if animal.status == 'adopted' else '' }}>Adopted</option>
+            <option value="foster" {{ 'selected' if animal.status == 'foster' else '' }}>In Foster</option>
+            <option value="medical_hold" {{ 'selected' if animal.status == 'medical_hold' else '' }}>Medical Hold</option>
+            <option value="transferred" {{ 'selected' if animal.status == 'transferred' else '' }}>Transferred</option>
+        </select>
+    </div>
+    
+    <div id="adoption-fields" style="display: {{ 'block' if animal.status == 'adopted' else 'none' }};">
+        <div class="form-group">
+            <label for="adopter_name">Adopter Name</label>
+            <input type="text" id="adopter_name" name="adopter_name" value="{{ animal.adopter_name }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="adopter_contact">Adopter Contact</label>
+            <input type="text" id="adopter_contact" name="adopter_contact" value="{{ animal.adopter_contact }}" class="form-control">
+        </div>
+    </div>
+    
+    <div id="foster-fields" style="display: {{ 'block' if animal.status == 'foster' else 'none' }};">
+        <div class="form-group">
+            <label for="foster_name">Foster Parent Name</label>
+            <input type="text" id="foster_name" name="foster_name" value="{{ animal.foster_name }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="foster_contact">Foster Parent Contact</label>
+            <input type="text" id="foster_contact" name="foster_contact" value="{{ animal.foster_contact }}" class="form-control">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label for="location_id">Location in Facility</label>
+        <select id="location_id" name="location_id" class="form-control">
+            <option value="">Not Assigned</option>
+            {% for location in locations %}
+            <option value="{{ location.id }}" 
+                    {{ 'selected' if animal.location_id == location.id else '' }}
+                    {{ 'disabled' if not location.active else '' }}>
+                {{ location.name }}
+                {% if not location.active %}(Inactive){% endif %}
+                {% if location.capacity %}
+                - {{ location.animal_count or 0 }}/{{ location.capacity }}
+                {% if location.animal_count and location.animal_count >= location.capacity and animal.location_id != location.id %}(FULL){% endif %}
+                {% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="medical_notes">Medical Notes</label>
+        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="3">{{ animal.medical_notes }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="behavioral_notes">Behavioral Notes</label>
+        <textarea id="behavioral_notes" name="behavioral_notes" class="form-control" rows="3">{{ animal.behavioral_notes }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="special_needs">Special Needs</label>
+        <textarea id="special_needs" name="special_needs" class="form-control" rows="2">{{ animal.special_needs }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('animal_detail', id=animal.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+document.getElementById('status').addEventListener('change', function() {
+    const adoptionFields = document.getElementById('adoption-fields');
+    const fosterFields = document.getElementById('foster-fields');
+    
+    adoptionFields.style.display = 'none';
+    fosterFields.style.display = 'none';
+    
+    if (this.value === 'adopted') {
+        adoptionFields.style.display = 'block';
+    } else if (this.value === 'foster') {
+        fosterFields.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

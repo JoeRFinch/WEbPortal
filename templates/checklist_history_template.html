@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>{{ checklist.name }} - Completion History</h2>
+    <div>
+        <a href="{{ url_for('complete_checklist', id=checklist.id) }}" class="btn btn-primary">Complete Now</a>
+        <a href="{{ url_for('checklists') }}" class="btn btn-secondary">Back to Checklists</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h3>About This Checklist</h3>
+    <p>{{ checklist.description or 'No description provided' }}</p>
+    <p><strong>Total Tasks:</strong> {{ checklist.items|length }}</p>
+    <p><strong>Total Completions:</strong> {{ pagination.total }}</p>
+</div>
+
+{% for completion in pagination.items %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+        <div>
+            <h3 style="margin-bottom: 0.5rem;">{{ completion.completed_at.strftime('%B %d, %Y at %I:%M %p') }}</h3>
+            <p><strong>Completed by:</strong> {{ completion.user.username }}</p>
+        </div>
+        <span class="status-badge status-{{ completion.status }}">{{ completion.status.upper() }}</span>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px;">
+        <h4 style="margin-bottom: 0.5rem;">Tasks Completed</h4>
+        <ul style="margin: 0; padding-left: 1.5rem;">
+            {% for item_completion in completion.items %}
+            <li style="margin-bottom: 0.5rem;">
+                {% if item_completion.completed %}
+                    <span style="color: #27ae60;">✓</span>
+                {% else %}
+                    <span style="color: #e74c3c;">✗</span>
+                {% endif %}
+                {{ item_completion.item.task }}
+                {% if item_completion.notes %}
+                    <em style="color: #7f8c8d; font-size: 0.9rem;"> - {{ item_completion.notes }}</em>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    {% if completion.notes %}
+    <div style="margin-top: 1rem;">
+        <h4>Overall Notes:</h4>
+        <p style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0 0 0;">{{ completion.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="card">
+    <p style="text-align: center; color: #7f8c8d;">This checklist has never been completed.</p>
+</div>
+{% endfor %}
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('checklist_history', id=checklist.id, page=pagination.prev_num) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('checklist_history', id=checklist.id, page=pagination.next_num) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

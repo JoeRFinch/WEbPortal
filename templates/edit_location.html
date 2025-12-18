@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>Edit Location: {{ location.name }}</h2>
+    <a href="{{ url_for('manage_locations') }}" class="btn btn-secondary">Back to Locations</a>
+</div>
+
+{% if animal_count > 0 %}
+<div class="card" style="background-color: #fff3cd; border-left: 4px solid #f39c12;">
+    <p><strong>⚠️ Note:</strong> This location currently has {{ animal_count }} animal(s). If you deactivate this location, no new animals can be assigned to it until it's reactivated.</p>
+</div>
+{% endif %}
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="name">Location Name *</label>
+        <input type="text" id="name" name="name" value="{{ location.name }}" required class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="location_type">Type</label>
+        <select id="location_type" name="location_type" class="form-control">
+            <option value="kennel" {{ 'selected' if location.location_type == 'kennel' else '' }}>Kennel</option>
+            <option value="cat_room" {{ 'selected' if location.location_type == 'cat_room' else '' }}>Cat Room</option>
+            <option value="isolation" {{ 'selected' if location.location_type == 'isolation' else '' }}>Isolation</option>
+            <option value="lobby" {{ 'selected' if location.location_type == 'lobby' else '' }}>Lobby</option>
+            <option value="other" {{ 'selected' if location.location_type == 'other' else '' }}>Other</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="capacity">Capacity</label>
+        <input type="number" id="capacity" name="capacity" value="{{ location.capacity }}" class="form-control">
+        <small style="color: #7f8c8d;">Current occupancy: {{ animal_count }} animal(s)</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="3">{{ location.notes }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label>
+            <input type="checkbox" name="active" {{ 'checked' if location.active else '' }}>
+            Active (animals can be assigned to this location)
+        </label>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('manage_locations') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Checklist</h2>
+
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <div class="form-group">
+        <label for="name">Checklist Name *</label>
+        <input type="text" id="name" name="name" value="{{ checklist.name }}" required class="form-control">
+    </div>
+    
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" class="form-control" rows="2">{{ checklist.description }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label for="time_period">Time Period</label>
+        <select id="time_period" name="time_period" class="form-control">
+            <option value="" {{ 'selected' if not checklist.time_period else '' }}>Any Time</option>
+            <option value="am" {{ 'selected' if checklist.time_period == 'am' else '' }}>AM (Morning)</option>
+            <option value="pm" {{ 'selected' if checklist.time_period == 'pm' else '' }}>PM (Afternoon/Evening)</option>
+            <option value="daily" {{ 'selected' if checklist.time_period == 'daily' else '' }}>Daily</option>
+            <option value="weekly" {{ 'selected' if checklist.time_period == 'weekly' else '' }}>Weekly</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Tasks</label>
+        <div id="tasks-container">
+            {% for item in checklist.items %}
+            <input type="text" name="tasks[]" value="{{ item.task }}" class="form-control task-input" placeholder="Task {{ loop.index }}">
+            {% endfor %}
+        </div>
+        <button type="button" onclick="addTask()" class="btn btn-secondary">Add Another Task</button>
+    </div>
+    
+    <button type="submit" class="btn btn-success">Save Changes</button>
+    <a href="{{ url_for('admin_checklists') }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<div class="card" style="margin-top: 1.5rem; border-left: 3px solid #e74c3c;">
+    <h3 style="color: #e74c3c;">Danger Zone</h3>
+    <p>Deleting this checklist will remove all completion history.</p>
+    <form method="POST" action="{{ url_for('admin_checklist_delete', id=checklist.id) }}" onsubmit="return confirm('Are you sure you want to delete this checklist? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Delete Checklist</button>
+    </form>
+</div>
+
+<script>
+function addTask() {
+    const container = document.getElementById('tasks-container');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'tasks[]';
+    input.className = 'form-control task-input';
+    input.placeholder = 'Task ' + (container.children.length + 1);
+    container.appendChild(input);
+}
+</script>
+{% endblock %}

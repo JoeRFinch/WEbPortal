@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Welcome, {{ current_user.username }}! 
+    <span class="role-badge role-{{ current_user.role }}">{{ current_user.role.title() }}</span>
+</h2>
+
+<!-- STAFF COMMUNICATIONS - For Management/Admin/Board -->
+{% if current_user.role in ['admin', 'management', 'board'] and unread_notes_count > 0 %}
+<div class="card" style="border-left: 4px solid #e74c3c; background-color: #fff3cd; margin-bottom: 2rem;">
+    <h3 style="color: #e74c3c;">📢 Unread Staff Communications: {{ unread_notes_count }}</h3>
+    <p>There are {{ unread_notes_count }} unread staff communication(s) that need your attention.</p>
+    <a href="{{ url_for('view_all_staff_notes') }}" class="btn btn-danger">View Staff Notes</a>
+</div>
+{% endif %}
+
+<!-- STANDARD SECTION - Everyone sees this -->
+<div class="dashboard-section">
+    <h2>My Dashboard</h2>
+    <div class="dashboard-grid">
+        <!-- Time Clock Card -->
+        <div class="card">
+            <h3>Time Clock</h3>
+            {% if active_entry %}
+            <p class="status-active">Currently Clocked In</p>
+            <p>Since: {{ active_entry.clock_in.strftime('%I:%M %p') }}</p>
+            {% if active_entry.role_type %}
+            <p>As: <span class="role-badge role-{{ active_entry.role_type }}">{{ active_entry.role_type.title() }}</span></p>
+            {% endif %}
+            <form method="POST" action="{{ url_for('clock_out') }}">
+                <button type="submit" class="btn btn-danger">Clock Out</button>
+            </form>
+            {% else %}
+            <p class="status-inactive">Not Clocked In</p>
+            {% if has_multiple_roles %}
+            <p style="margin: 0.5rem 0; font-size: 0.9rem;">Clock in as:</p>
+            <form method="POST" action="{{ url_for('clock_in') }}" style="display: inline-block; margin-right: 0.5rem;">
+                <input type="hidden" name="role_type" value="employee">
+                <button type="submit" class="btn btn-success">Employee</button>
+            </form>
+            <form method="POST" action="{{ url_for('clock_in') }}" style="display: inline-block;">
+                <input type="hidden" name="role_type" value="volunteer">
+                <button type="submit" class="btn btn-success">Volunteer</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('clock_in') }}">
+                <button type="submit" class="btn btn-success">Clock In</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+        
+        <!-- Today's Checklists Card -->
+        {% if current_user.has_permission('view_checklists') %}
+        <div class="card">
+            <h3>Today's Checklists</h3>
+            <ul class="list">
+                {% for checklist in checklists %}
+                <li><a href="{{ url_for('complete_checklist', id=checklist.id) }}">{{ checklist.name }}</a>
+                    {% if checklist.time_period %}
+                    <span style="font-size: 0.8rem; color: #7f8c8d;">({{ checklist.time_period.upper() }})</span>
+                    {% endif %}
+                </li>
+                {% else %}
+                <li>No checklists available</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Recent Animals Card -->
+        {% if current_user.has_permission('view_animals') %}
+        <div class="card">
+            <h3>Recent Animals</h3>
+            <ul class="list">
+                {% for animal in recent_animals %}
+                <li><a href="{{ url_for('animal_detail', id=animal.id) }}">{{ animal.name }} - {{ animal.species }}</a></li>
+                {% else %}
+                <li>No animals in system</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Actions Card -->
+        <div class="card">
+            <h3>Quick Actions</h3>
+            {% if current_user.has_permission('add_staff_notes') %}
+            <a href="{{ url_for('staff_notes') }}" class="btn btn-secondary">Add Staff Note</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN SECTION - Only for Admins -->
+{% if current_user.role == 'admin' %}
+<div class="dashboard-section admin-section">
+    <h2>⚙️ Administrator Tools</h2>
+    <div class="dashboard-grid">
+        <div class="admin-panel">
+            <h3>System Administration</h3>
+            <a href="{{ url_for('admin_users') }}" class="btn">Manage Users</a>
+            <a href="{{ url_for('admin_checklists') }}" class="btn">Manage Checklists</a>
+            <a href="{{ url_for('admin_animals') }}" class="btn">Add Animal</a>
+            <a href="{{ url_for('manage_locations') }}" class="btn">Manage Locations</a>
+            <a href="{{ url_for('audit_log') }}" class="btn">Audit Log</a>
+            {% if current_user.has_permission('view_maintenance') %}
+            <a href="{{ url_for('maintenance_tickets') }}" class="btn">Maintenance Tickets</a>
+            {% endif %}
+            <a href="{{ url_for('system_settings') }}" class="btn">System Settings</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- MANAGEMENT SECTION - Only for Management -->
+{% if current_user.role == 'management' %}
+<div class="dashboard-section management-section">
+    <h2>🏢 Management Tools</h2>
+    <div class="dashboard-grid">
+        <div class="management-panel">
+            <h3>Management Functions</h3>
+            <a href="{{ url_for('admin_users') }}" class="btn">Manage Staff</a>
+            <a href="{{ url_for('admin_checklists') }}" class="btn">Manage Checklists</a>
+            <a href="{{ url_for('admin_animals') }}" class="btn">Add Animal</a>
+            <a href="{{ url_for('manage_locations') }}" class="btn">Manage Locations</a>
+            <a href="{{ url_for('audit_log') }}" class="btn">Audit Log</a>
+            {% if current_user.has_permission('view_maintenance') %}
+            <a href="{{ url_for('maintenance_tickets') }}" class="btn">Maintenance Tickets</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- BOARD SECTION - Only for Board Members -->
+{% if current_user.role == 'board' %}
+<div class="dashboard-section board-section">
+    <h2>📊 Board Member Tools</h2>
+    <div class="dashboard-grid">
+        <div class="board-panel">
+            <h3>Board Functions</h3>
+            <a href="{{ url_for('admin_users') }}" class="btn">View Users</a>
+            <a href="{{ url_for('audit_log') }}" class="btn">Audit Log</a>
+            <a href="{{ url_for('reports_dashboard') }}" class="btn">Reports & Analytics</a>
+            {% if current_user.has_permission('view_maintenance') %}
+            <a href="{{ url_for('maintenance_tickets') }}" class="btn">View Maintenance</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

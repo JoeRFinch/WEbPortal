@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>Phone Call Logs</h2>
+    <button onclick="document.getElementById('logForm').style.display='block'" class="btn btn-primary">New Phone Log</button>
+</div>
+
+<div style="margin-bottom: 1rem;">
+    <label>Filter by Status: </label>
+    <select onchange="window.location.href='{{ url_for('phone_logs') }}?status=' + this.value" style="padding: 0.5rem;">
+        <option value="all" {{ 'selected' if status_filter == 'all' else '' }}>All</option>
+        <option value="open" {{ 'selected' if status_filter == 'open' else '' }}>Open</option>
+        <option value="in_progress" {{ 'selected' if status_filter == 'in_progress' else '' }}>In Progress</option>
+        <option value="resolved" {{ 'selected' if status_filter == 'resolved' else '' }}>Resolved</option>
+    </select>
+</div>
+
+<div id="logForm" style="display:none;" class="card">
+    <h3>Create Phone Log</h3>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="caller_name">Caller Name</label>
+            <input type="text" id="caller_name" name="caller_name" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="caller_phone">Phone Number</label>
+            <input type="text" id="caller_phone" name="caller_phone" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="issue">Issue/Reason for Call *</label>
+            <textarea id="issue" name="issue" required class="form-control" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="action_taken">Action Taken</label>
+            <textarea id="action_taken" name="action_taken" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="follow_up_needed">
+                Follow-up needed
+            </label>
+        </div>
+        <button type="submit" class="btn btn-success">Save Log</button>
+        <button type="button" onclick="document.getElementById('logForm').style.display='none'" class="btn btn-secondary">Cancel</button>
+    </form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Caller</th>
+            <th>Phone</th>
+            <th>Issue</th>
+            <th>Status</th>
+            <th>Follow-up</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in pagination.items %}
+        <tr style="cursor: pointer;" onclick="window.location='{{ url_for('phone_log_detail', id=log.id) }}'">
+            <td>{{ log.created_at.strftime('%Y-%m-%d %I:%M %p') }}</td>
+            <td>{{ log.caller_name or '-' }}</td>
+            <td>{{ log.caller_phone or '-' }}</td>
+            <td>{{ log.issue[:60] }}{{ '...' if log.issue|length > 60 else '' }}</td>
+            <td>
+                <span class="status-badge status-{{ log.status }}">{{ log.status }}</span>
+            </td>
+            <td>{{ 'Yes' if log.follow_up_needed else 'No' }}</td>
+            <td onclick="event.stopPropagation()">
+                <a href="{{ url_for('phone_log_detail', id=log.id) }}" class="btn-small">View</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align: center;">No phone logs found</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('phone_logs', page=pagination.prev_num, status=status_filter) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('phone_logs', page=pagination.next_num, status=status_filter) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+.status-open {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.status-in_progress {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.status-resolved {
+    background-color: #d4edda;
+    color: #155724;
+}
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+.btn-small:hover {
+    background-color: #2980b9;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

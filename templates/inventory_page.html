@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Inventory Management</h2>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <div>
+        <label>Category: </label>
+        <select onchange="updateFilter('category', this.value)" style="padding: 0.5rem;">
+            <option value="all" {{ 'selected' if category_filter == 'all' else '' }}>All Items</option>
+            <option value="cat" {{ 'selected' if category_filter == 'cat' else '' }}>Cat Supplies</option>
+            <option value="dog" {{ 'selected' if category_filter == 'dog' else '' }}>Dog Supplies</option>
+            <option value="general" {{ 'selected' if category_filter == 'general' else '' }}>General</option>
+            <option value="medical" {{ 'selected' if category_filter == 'medical' else '' }}>Medical</option>
+            <option value="cleaning" {{ 'selected' if category_filter == 'cleaning' else '' }}>Cleaning</option>
+            <option value="food" {{ 'selected' if category_filter == 'food' else '' }}>Food</option>
+        </select>
+    </div>
+</div>
+
+{% if current_user.has_permission('edit_donations') %}
+<div style="margin-bottom: 1rem;">
+    <button onclick="document.getElementById('addItemForm').style.display='block'" class="btn btn-primary">Add Inventory Item</button>
+</div>
+
+<div id="addItemForm" style="display:none;" class="card">
+    <h3>Add Inventory Item</h3>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="item_name">Item Name *</label>
+            <input type="text" id="item_name" name="item_name" required class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="category">Category *</label>
+            <select id="category" name="category" class="form-control" required>
+                <option value="cat">Cat Supplies</option>
+                <option value="dog">Dog Supplies</option>
+                <option value="general">General</option>
+                <option value="medical">Medical</option>
+                <option value="cleaning">Cleaning</option>
+                <option value="food">Food</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="number" id="quantity" name="quantity" class="form-control" value="0">
+        </div>
+        <div class="form-group">
+            <label for="unit">Unit</label>
+            <input type="text" id="unit" name="unit" class="form-control" placeholder="e.g., bags, bottles, boxes">
+        </div>
+        <div class="form-group">
+            <label for="location">Storage Location</label>
+            <input type="text" id="location" name="location" class="form-control" placeholder="e.g., Cabinet A, Shelf 2">
+        </div>
+        <div class="form-group">
+            <label for="reorder_point">Reorder Point</label>
+            <input type="number" id="reorder_point" name="reorder_point" class="form-control" placeholder="Notify when stock falls below this">
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Add Item</button>
+        <button type="button" onclick="document.getElementById('addItemForm').style.display='none'" class="btn btn-secondary">Cancel</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr style="{{ 'background-color: #fff3cd;' if item.quantity <= item.reorder_point else '' }}">
+                <td><strong>{{ item.item_name }}</strong></td>
+                <td><span class="category-badge category-{{ item.category }}">{{ item.category.title() }}</span></td>
+                <td>
+                    {{ item.quantity }} {{ item.unit or '' }}
+                    {% if item.quantity <= item.reorder_point %}
+                    <span style="color: #e74c3c; font-size: 0.8rem;">⚠️ LOW</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.location or '-' }}</td>
+                <td>
+                    {% if item.quantity <= 0 %}
+                    <span style="color: #e74c3c; font-weight: bold;">OUT OF STOCK</span>
+                    {% elif item.quantity <= item.reorder_point %}
+                    <span style="color: #f39c12; font-weight: bold;">LOW STOCK</span>
+                    {% else %}
+                    <span style="color: #27ae60; font-weight: bold;">IN STOCK</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('inventory_detail', id=item.id) }}" class="btn-small">View</a>
+                    {% if current_user.has_permission('edit_donations') %}
+                    <a href="{{ url_for('inventory_edit', id=item.id) }}" class="btn-small">Edit</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align: center;">No inventory items found</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function updateFilter(filterType, value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(filterType, value);
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+}
+</script>
+
+<style>
+.category-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+.category-cat {
+    background-color: #e7d5ff;
+    color: #5a1e8a;
+}
+.category-dog {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.category-general {
+    background-color: #d4edda;
+    color: #155724;
+}
+.category-medical {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.category-cleaning {
+    background-color: #cff4fc;
+    color: #055160;
+}
+.category-food {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.btn-small {
+    padding: 0.25rem 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-right: 0.25rem;
+}
+.btn-small:hover {
+    background-color: #2980b9;
+}
+</style>
+{% endblock %}

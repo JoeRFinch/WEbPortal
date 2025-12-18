@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>Maintenance Ticket #{{ ticket.id }}</h2>
+    <div>
+        {% if current_user.has_permission('manage_maintenance') %}
+        <a href="{{ url_for('maintenance_ticket_edit', id=ticket.id) }}" class="btn btn-primary">Edit</a>
+        {% endif %}
+        <a href="{{ url_for('maintenance_tickets') }}" class="btn btn-secondary">Back to Tickets</a>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+        <h3>{{ ticket.title }}</h3>
+        <div>
+            <span class="priority-badge priority-{{ ticket.priority }}">{{ ticket.priority.upper() }}</span>
+            <span class="status-badge status-{{ ticket.status }}">{{ ticket.status.replace('_', ' ').title() }}</span>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <p><strong>Created:</strong> {{ ticket.created_at.strftime('%B %d, %Y') }}</p>
+            <p><strong>Created By:</strong> {{ ticket.creator.username if ticket.creator else 'Unknown' }}</p>
+            <p><strong>Category:</strong> {{ ticket.category.replace('_', ' ').title() if ticket.category else '-' }}</p>
+            <p><strong>Location:</strong> {{ ticket.location or '-' }}</p>
+        </div>
+        <div>
+            <p><strong>Assigned To:</strong> {{ ticket.assignee.username if ticket.assignee else 'Unassigned' }}</p>
+            <p><strong>Due Date:</strong> {{ ticket.due_date.strftime('%B %d, %Y') if ticket.due_date else 'Not set' }}</p>
+            {% if ticket.completed_at %}
+            <p><strong>Completed:</strong> {{ ticket.completed_at.strftime('%B %d, %Y') }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <p><strong>Estimated Cost:</strong> {{ '$%.2f'|format(ticket.estimated_cost) if ticket.estimated_cost else 'Not estimated' }}</p>
+            <p><strong>Actual Cost:</strong> {{ '$%.2f'|format(ticket.actual_cost) if ticket.actual_cost else 'Not recorded' }}</p>
+        </div>
+    </div>
+    
+    <hr>
+    
+    {% if ticket.description %}
+    <div style="margin-bottom: 1.5rem;">
+        <h4 style="margin-bottom: 0.5rem;">Description</h4>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">{{ ticket.description }}</div>
+    </div>
+    {% endif %}
+    
+    {% if ticket.notes %}
+    <div>
+        <h4 style="margin-bottom: 0.5rem;">Work Notes</h4>
+        <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">{{ ticket.notes }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.priority-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+.priority-urgent {
+    background-color: #e74c3c;
+    color: white;
+}
+.priority-high {
+    background-color: #f39c12;
+    color: white;
+}
+.priority-medium {
+    background-color: #3498db;
+    color: white;
+}
+.priority-low {
+    background-color: #95a5a6;
+    color: white;
+}
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+.status-open {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.status-in_progress {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+}
+.status-on_hold {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Checklists</h2>
+
+<div class="checklist-grid">
+    {% for checklist in checklists %}
+    <div class="card">
+        <h3>{{ checklist.name }}</h3>
+        <p>{{ checklist.description or 'No description' }}</p>
+        
+        <div style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; margin: 1rem 0;">
+            <p style="margin: 0;"><strong>Tasks:</strong> {{ checklist.items|length }}</p>
+            {% if checklist.last_completed %}
+            <p style="margin: 0.5rem 0 0 0;">
+                <strong>Last Completed:</strong> 
+                {{ checklist.last_completed.completed_at.strftime('%b %d at %I:%M %p') }}
+                <br>
+                <em style="font-size: 0.875rem; color: #7f8c8d;">by {{ checklist.last_completed.user.username }}</em>
+            </p>
+            {% else %}
+            <p style="margin: 0.5rem 0 0 0; color: #e74c3c;">
+                <strong>Never completed</strong>
+            </p>
+            {% endif %}
+        </div>
+        
+        <a href="{{ url_for('complete_checklist', id=checklist.id) }}" class="btn btn-primary">Complete Now</a>
+        <a href="{{ url_for('checklist_history', id=checklist.id) }}" class="btn btn-secondary">View History</a>
+    </div>
+    {% else %}
+    <div class="card">
+        <p>No checklists available. Administrators can create them.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

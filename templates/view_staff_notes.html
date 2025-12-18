@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Staff Communication Notes</h2>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+        <label>Priority: </label>
+        <select onchange="updateFilter('priority', this.value)" style="padding: 0.5rem;">
+            <option value="all" {{ 'selected' if filter_priority == 'all' else '' }}>All</option>
+            <option value="urgent" {{ 'selected' if filter_priority == 'urgent' else '' }}>Urgent</option>
+            <option value="high" {{ 'selected' if filter_priority == 'high' else '' }}>High</option>
+            <option value="normal" {{ 'selected' if filter_priority == 'normal' else '' }}>Normal</option>
+            <option value="low" {{ 'selected' if filter_priority == 'low' else '' }}>Low</option>
+        </select>
+    </div>
+    
+    <div>
+        <label>Status: </label>
+        <select onchange="updateFilter('read', this.value)" style="padding: 0.5rem;">
+            <option value="all" {{ 'selected' if filter_read == 'all' else '' }}>All</option>
+            <option value="unread" {{ 'selected' if filter_read == 'unread' else '' }}>Unread</option>
+            <option value="read" {{ 'selected' if filter_read == 'read' else '' }}>Read</option>
+        </select>
+    </div>
+</div>
+
+{% for note in pagination.items %}
+<div class="card" style="border-left: 4px solid {{ 
+    '#e74c3c' if note.priority == 'urgent' else 
+    '#f39c12' if note.priority == 'high' else
+    '#3498db' if note.priority == 'normal' else
+    '#95a5a6' }}; {{ 'background-color: #fff3cd;' if not note.is_read else '' }}">
+    
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+        <div>
+            <h3 style="margin-bottom: 0.5rem;">
+                {{ note.title or '(No Subject)' }}
+                {% if not note.is_read %}
+                <span style="background-color: #e74c3c; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.7rem; margin-left: 0.5rem;">NEW</span>
+                {% endif %}
+            </h3>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">
+                <strong>From:</strong> {{ note.user.username }} |
+                <strong>Date:</strong> {{ note.created_at.strftime('%B %d, %Y at %I:%M %p') }} |
+                <strong>Category:</strong> {{ note.category.replace('_', ' ').title() }}
+            </p>
+        </div>
+        <div>
+            <span class="priority-badge priority-{{ note.priority }}">{{ note.priority.upper() }}</span>
+        </div>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap; margin: 1rem 0;">{{ note.content }}</div>
+    
+    {% if not note.is_read %}
+    <form method="POST" action="{{ url_for('mark_staff_note_read', id=note.id) }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-success">Mark as Read</button>
+    </form>
+    {% else %}
+    <span style="color: #27ae60; font-size: 0.9rem;">✓ Read</span>
+    {% endif %}
+</div>
+{% else %}
+<div class="card">
+    <p style="text-align: center; color: #7f8c8d;">No staff notes found.</p>
+</div>
+{% endfor %}
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('view_all_staff_notes', page=pagination.prev_num, priority=filter_priority, read=filter_read) }}" class="btn btn-secondary">« Previous</a>
+    {% endif %}
+    
+    <span style="padding: 0.5rem 1rem;">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+        <a href="{{ url_for('view_all_staff_notes', page=pagination.next_num, priority=filter_priority, read=filter_read) }}" class="btn btn-secondary">Next »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+function updateFilter(filterType, value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(filterType, value);
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+}
+</script>
+
+<style>
+.priority-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+.priority-urgent {
+    background-color: #e74c3c;
+    color: white;
+}
+.priority-high {
+    background-color: #f39c12;
+    color: white;
+}
+.priority-normal {
+    background-color: #3498db;
+    color: white;
+}
+.priority-low {
+    background-color: #95a5a6;
+    color: white;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}
