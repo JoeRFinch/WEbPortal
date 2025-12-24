@@ -3,11 +3,11 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_wtf.csrf import CSRFProtect
 from models import db, User, TimeEntry, Checklist, ChecklistItem, ChecklistCompletion
 from models import ChecklistItemCompletion, Animal, PhoneLog, Donation, ItemOut, AuditLog
-from models import AnimalLocation, VetVisit, MaintenanceTicket, StaffNote
+from models import AnimalLocation, VetVisit, MaintenanceTicket, StaffNote, InventoryItem, InventoryTransaction
 from config import Config
 from datetime import datetime
 from functools import wraps
-from sqlalchemy import func
+from sqlalchemy import func, case
 import json
 import os
 
@@ -152,12 +152,21 @@ def dashboard():
     if current_user.role in ['admin', 'management', 'board']:
         unread_notes_count = StaffNote.query.filter_by(is_read=False).count()
     
+    # Get low stock items count
+    low_stock_count = 0
+    if current_user.has_permission('view_inventory'):
+        low_stock_count = InventoryItem.query.filter(
+            InventoryItem.reorder_point.isnot(None),
+            InventoryItem.quantity <= InventoryItem.reorder_point
+        ).count()
+    
     return render_template('dashboard.html',
                          active_entry=active_entry,
                          has_multiple_roles=has_multiple_roles,
                          checklists=today_checklists,
                          recent_animals=recent_animals,
-                         unread_notes_count=unread_notes_count)
+                         unread_notes_count=unread_notes_count,
+                         low_stock_count=low_stock_count)
 
 @app.route('/clock/in', methods=['POST'])
 @login_required
@@ -203,7 +212,7 @@ def clock_out():
 @login_required
 def clock_history():
     """
-    For admins: Shows summary of all users with total hours
+    For admins: Shows summary of all users with total hours separated by type
     For regular users: Shows their own history
     """
     if not current_user.has_permission('view_time_clock'):
@@ -211,11 +220,15 @@ def clock_history():
         return redirect(url_for('dashboard'))
     
     if current_user.has_permission('view_all_time_entries'):
-        # Admin view - show summary of all users
+        # Admin view - show summary of all users with separated hours
         users_summary = db.session.query(
             User.id,
             User.username,
             User.role,
+            func.sum(case((TimeEntry.role_type.in_(['employee', 'maintenance']), TimeEntry.total_hours), else_=0)).label('paid_hours'),
+            func.sum(case((TimeEntry.role_type == 'volunteer', TimeEntry.total_hours), else_=0)).label('volunteer_hours'),
+            func.sum(case((TimeEntry.role_type == 'employee', TimeEntry.total_hours), else_=0)).label('employee_hours'),
+            func.sum(case((TimeEntry.role_type == 'maintenance', TimeEntry.total_hours), else_=0)).label('maintenance_hours'),
             func.sum(TimeEntry.total_hours).label('total_hours'),
             func.count(TimeEntry.id).label('total_entries')
         ).outerjoin(TimeEntry).group_by(User.id).all()
@@ -385,17 +398,20 @@ def animal_edit(id):
         animal.medical_notes = request.form.get('medical_notes')
         animal.behavioral_notes = request.form.get('behavioral_notes')
         animal.special_needs = request.form.get('special_needs')
-        animal.status = request.form.get('status')
+        new_status = request.form.get('status')
         
-        if animal.status == 'adopted':
+        # Check if status changed to adopted
+        if new_status == 'adopted' and animal.status != 'adopted':
             animal.adopted_date = datetime.now()
             animal.adopter_name = request.form.get('adopter_name')
             animal.adopter_contact = request.form.get('adopter_contact')
         
-        if animal.status == 'foster':
+        if new_status == 'foster':
             animal.foster_out_date = datetime.now()
             animal.foster_name = request.form.get('foster_name')
             animal.foster_contact = request.form.get('foster_contact')
+        
+        animal.status = new_status
         
         new_values = {
             'status': animal.status,
@@ -404,7 +420,12 @@ def animal_edit(id):
         
         db.session.commit()
         log_action('update_animal', 'animal', animal.id, old_values, new_values)
-        flash('Animal updated successfully!', 'success')
+        
+        if new_status == 'adopted' and old_values['status'] != 'adopted':
+            flash('Animal marked as adopted! Adoption supplies automatically deducted from inventory.', 'success')
+        else:
+            flash('Animal updated successfully!', 'success')
+        
         return redirect(url_for('animal_detail', id=id))
     
     locations = AnimalLocation.query.filter_by(active=True).order_by(AnimalLocation.name).all()
@@ -486,31 +507,6 @@ def phone_log_edit(id):
     
     return render_template('phone_log_edit.html', log=log)
 
-@app.route('/logs/phone/<int:id>/update-status', methods=['POST'])
-@login_required
-def phone_log_update_status(id):
-    """Quick status update without full edit"""
-    if not current_user.has_permission('edit_phone_logs'):
-        flash('You do not have permission to update phone logs.', 'error')
-        return redirect(url_for('phone_logs'))
-    
-    log = PhoneLog.query.get_or_404(id)
-    new_status = request.form.get('status')
-    
-    if new_status in ['open', 'in_progress', 'resolved']:
-        old_status = log.status
-        log.status = new_status
-        
-        if new_status == 'resolved':
-            log.resolved_at = datetime.now()
-        
-        db.session.commit()
-        log_action('update_phone_log_status', 'phone_log', log.id, 
-                  {'status': old_status}, {'status': new_status})
-        flash(f'Phone log status updated to {new_status}!', 'success')
-    
-    return redirect(url_for('phone_logs'))
-
 @app.route('/logs/donations', methods=['GET', 'POST'])
 @login_required
 def donations():
@@ -533,9 +529,41 @@ def donations():
             created_by=current_user.id
         )
         db.session.add(donation)
+        db.session.flush()
+        
+        # Automatically add item donations to inventory if they match existing items
+        if donation.donation_type == 'item' and donation.item_description:
+            # Parse the description to try to find matching inventory items
+            description = donation.item_description.lower()
+            
+            # Get all inventory items
+            inventory_items = InventoryItem.query.all()
+            
+            for inv_item in inventory_items:
+                # Simple matching - check if item name is in description
+                if inv_item.item_name.lower() in description:
+                    # Try to extract quantity (look for numbers in description)
+                    import re
+                    numbers = re.findall(r'\d+', description)
+                    quantity = int(numbers[0]) if numbers else 1
+                    
+                    # Add to inventory
+                    transaction = InventoryTransaction(
+                        item_id=inv_item.id,
+                        transaction_type='in',
+                        quantity=quantity,
+                        reason='donation',
+                        reference_type='donation',
+                        reference_id=donation.id,
+                        notes=f'From {donation.donor_name or "Anonymous"}',
+                        created_by=current_user.id
+                    )
+                    inv_item.quantity += quantity
+                    db.session.add(transaction)
+        
         db.session.commit()
         log_action('create_donation', 'donation', donation.id)
-        flash('Donation logged successfully!', 'success')
+        flash('Donation logged successfully! Matching items automatically added to inventory.', 'success')
         return redirect(url_for('donations'))
     
     page = request.args.get('page', 1, type=int)
@@ -608,9 +636,33 @@ def items_out():
             created_by=current_user.id
         )
         db.session.add(item)
+        db.session.flush()
+        
+        # Automatically deduct from inventory if item exists
+        inv_item = InventoryItem.query.filter_by(item_name=item.item_name).first()
+        if inv_item:
+            quantity = item.quantity or 1
+            if inv_item.quantity >= quantity:
+                transaction = InventoryTransaction(
+                    item_id=inv_item.id,
+                    transaction_type='out',
+                    quantity=quantity,
+                    reason=item.reason,
+                    reference_type='item_out',
+                    reference_id=item.id,
+                    notes=item.notes,
+                    created_by=current_user.id
+                )
+                inv_item.quantity -= quantity
+                db.session.add(transaction)
+                flash('Item logged and automatically deducted from inventory!', 'success')
+            else:
+                flash(f'Item logged but insufficient inventory ({inv_item.quantity} available).', 'warning')
+        else:
+            flash('Item logged (not tracked in inventory).', 'success')
+        
         db.session.commit()
         log_action('create_item_out', 'item_out', item.id)
-        flash('Item outgoing logged successfully!', 'success')
         return redirect(url_for('items_out'))
     
     page = request.args.get('page', 1, type=int)
@@ -620,6 +672,155 @@ def items_out():
     animals = Animal.query.all()
     
     return render_template('items_out.html', pagination=pagination, animals=animals)
+
+# ==================== INVENTORY ROUTES ====================
+
+@app.route('/inventory')
+@login_required
+def inventory():
+    if not current_user.has_permission('view_inventory'):
+        flash('You do not have permission to view inventory.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    page = request.args.get('page', 1, type=int)
+    category_filter = request.args.get('category', 'all')
+    
+    query = InventoryItem.query
+    if category_filter != 'all':
+        query = query.filter_by(category=category_filter)
+    
+    items = query.order_by(InventoryItem.item_name).all()
+    
+    return render_template('inventory_page.html', items=items, category_filter=category_filter)
+
+@app.route('/inventory/new', methods=['GET', 'POST'])
+@login_required
+def inventory_new():
+    if not current_user.has_permission('edit_inventory'):
+        flash('You do not have permission to add inventory items.', 'error')
+        return redirect(url_for('inventory'))
+    
+    if request.method == 'POST':
+        item = InventoryItem(
+            item_name=request.form.get('item_name'),
+            category=request.form.get('category'),
+            quantity=request.form.get('quantity') or 0,
+            unit=request.form.get('unit'),
+            location=request.form.get('location'),
+            reorder_point=request.form.get('reorder_point') or None,
+            notes=request.form.get('notes')
+        )
+        db.session.add(item)
+        db.session.commit()
+        log_action('create_inventory_item', 'inventory_item', item.id)
+        flash('Inventory item created successfully!', 'success')
+        return redirect(url_for('inventory'))
+    
+    return redirect(url_for('inventory'))
+
+@app.route('/inventory/<int:id>')
+@login_required
+def inventory_detail(id):
+    if not current_user.has_permission('view_inventory'):
+        flash('You do not have permission to view inventory.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    item = InventoryItem.query.get_or_404(id)
+    return render_template('inventory_detail.html', item=item)
+
+@app.route('/inventory/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def inventory_edit(id):
+    if not current_user.has_permission('edit_inventory'):
+        flash('You do not have permission to edit inventory.', 'error')
+        return redirect(url_for('inventory_detail', id=id))
+    
+    item = InventoryItem.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        old_quantity = item.quantity
+        
+        item.item_name = request.form.get('item_name')
+        item.category = request.form.get('category')
+        item.quantity = int(request.form.get('quantity') or 0)
+        item.unit = request.form.get('unit')
+        item.location = request.form.get('location')
+        item.reorder_point = request.form.get('reorder_point') or None
+        item.notes = request.form.get('notes')
+        
+        # If quantity changed directly, create adjustment transaction
+        if item.quantity != old_quantity:
+            diff = item.quantity - old_quantity
+            transaction = InventoryTransaction(
+                item_id=item.id,
+                transaction_type='in' if diff > 0 else 'out',
+                quantity=abs(diff),
+                reason='adjustment',
+                notes='Manual quantity adjustment',
+                created_by=current_user.id
+            )
+            db.session.add(transaction)
+        
+        db.session.commit()
+        log_action('update_inventory_item', 'inventory_item', item.id)
+        flash('Inventory item updated successfully!', 'success')
+        return redirect(url_for('inventory_detail', id=id))
+    
+    return render_template('inventory_edit.html', item=item)
+
+@app.route('/inventory/<int:id>/adjust', methods=['POST'])
+@login_required
+def inventory_adjust(id):
+    if not current_user.has_permission('edit_inventory'):
+        flash('You do not have permission to adjust inventory.', 'error')
+        return redirect(url_for('inventory_detail', id=id))
+    
+    item = InventoryItem.query.get_or_404(id)
+    
+    quantity = int(request.form.get('quantity'))
+    transaction_type = request.form.get('transaction_type')
+    reason = request.form.get('reason')
+    notes = request.form.get('notes')
+    
+    # Create transaction
+    transaction = InventoryTransaction(
+        item_id=item.id,
+        transaction_type=transaction_type,
+        quantity=quantity,
+        reason=reason,
+        notes=notes,
+        created_by=current_user.id
+    )
+    
+    # Update inventory quantity
+    if transaction_type == 'in':
+        item.quantity += quantity
+    else:
+        item.quantity -= quantity
+        if item.quantity < 0:
+            item.quantity = 0
+            flash('Warning: Inventory quantity cannot go below 0. Set to 0.', 'warning')
+    
+    db.session.add(transaction)
+    db.session.commit()
+    
+    log_action('adjust_inventory', 'inventory_item', item.id)
+    flash(f'Inventory adjusted: {quantity} items {"added" if transaction_type == "in" else "removed"}!', 'success')
+    return redirect(url_for('inventory_detail', id=id))
+
+@app.route('/inventory/<int:id>/delete', methods=['POST'])
+@login_required
+def inventory_delete(id):
+    if current_user.role not in ['admin', 'management']:
+        flash('Only administrators and management can delete inventory items.', 'error')
+        return redirect(url_for('inventory_detail', id=id))
+    
+    item = InventoryItem.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    log_action('delete_inventory_item', 'inventory_item', id)
+    flash('Inventory item deleted successfully!', 'success')
+    return redirect(url_for('inventory'))
 
 # ==================== USER MANAGEMENT ROUTES ====================
 
@@ -769,7 +970,7 @@ def edit_user_permissions(user_id):
             'view_phone_logs', 'edit_phone_logs', 'view_donations', 'edit_donations',
             'view_items_out', 'edit_items_out', 'view_audit_log',
             'manage_users', 'manage_locations', 'view_maintenance', 'manage_maintenance',
-            'view_staff_notes', 'add_staff_notes'
+            'view_staff_notes', 'add_staff_notes', 'view_inventory', 'edit_inventory'
         ]
         
         for perm in all_permissions:
@@ -1244,6 +1445,14 @@ def reports_dashboard():
     flash('Reports and analytics coming soon!', 'warning')
     return redirect(url_for('dashboard'))
 
+@app.context_processor
+def inject_unread_notes():
+    """Make unread notes count available to all templates"""
+    if current_user.is_authenticated and current_user.role in ['admin', 'management', 'board']:
+        unread_notes_count = StaffNote.query.filter_by(is_read=False).count()
+        return dict(unread_notes_count=unread_notes_count)
+    return dict(unread_notes_count=0)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -1280,5 +1489,34 @@ if __name__ == '__main__':
             
             db.session.commit()
             print('✓ Default animal locations created')
+        
+        # Add default inventory items if none exist
+        if InventoryItem.query.count() == 0:
+            default_inventory = [
+                ('Collar', 'cat', 10, 'units', 'Storage Room A', 5),
+                ('Collar', 'dog', 15, 'units', 'Storage Room A', 5),
+                ('Leash', 'dog', 12, 'units', 'Storage Room A', 5),
+                ('Cat Food', 'food', 20, 'bags', 'Food Storage', 10),
+                ('Dog Food', 'food', 25, 'bags', 'Food Storage', 10),
+                ('Cat Litter', 'cat', 30, 'bags', 'Storage Room B', 15),
+                ('Food Sample', 'food', 50, 'bags', 'Front Desk', 20),
+                ('Cleaning Spray', 'cleaning', 10, 'bottles', 'Janitorial Closet', 5),
+                ('Paper Towels', 'cleaning', 20, 'rolls', 'Janitorial Closet', 10),
+                ('Vaccine Supplies', 'medical', 15, 'kits', 'Medical Cabinet', 5),
+            ]
+            
+            for name, cat, qty, unit, loc, reorder in default_inventory:
+                item = InventoryItem(
+                    item_name=name,
+                    category=cat,
+                    quantity=qty,
+                    unit=unit,
+                    location=loc,
+                    reorder_point=reorder
+                )
+                db.session.add(item)
+            
+            db.session.commit()
+            print('✓ Default inventory items created')
     
     app.run(host='0.0.0.0', port=5000, debug=False)
