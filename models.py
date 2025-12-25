@@ -64,7 +64,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': True,
                 'manage_maintenance': True,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': True,
+                'edit_inventory': True
             },
             'management': {
                 'view_dashboard': True,
@@ -89,7 +91,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': True,
                 'manage_maintenance': True,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': True,
+                'edit_inventory': True
             },
             'board': {
                 'view_dashboard': True,
@@ -114,7 +118,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': True,
                 'manage_maintenance': False,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': True,
+                'edit_inventory': False
             },
             'employee': {
                 'view_dashboard': True,
@@ -139,7 +145,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': False,
                 'manage_maintenance': False,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': True,
+                'edit_inventory': True
             },
             'volunteer': {
                 'view_dashboard': True,
@@ -164,7 +172,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': False,
                 'manage_maintenance': False,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': True,
+                'edit_inventory': False
             },
             'maintenance': {
                 'view_dashboard': True,
@@ -189,7 +199,9 @@ class User(UserMixin, db.Model):
                 'view_maintenance': True,
                 'manage_maintenance': True,
                 'view_staff_notes': True,
-                'add_staff_notes': True
+                'add_staff_notes': True,
+                'view_inventory': False,
+                'edit_inventory': False
             }
         }
         return defaults.get(self.role, defaults['volunteer'])
@@ -274,7 +286,7 @@ class Animal(db.Model):
     sex = db.Column(db.String(20))
     intake_date = db.Column(db.DateTime, default=datetime.utcnow)
     intake_reason = db.Column(db.Text)
-    location_id = db.Column(db.Integer, db.ForeignKey('animal_location.id'))  # NEW: FK to locations
+    location_id = db.Column(db.Integer, db.ForeignKey('animal_location.id'))
     location = db.Column(db.String(100))  # DEPRECATED: Keep for migration
     medical_notes = db.Column(db.Text)
     behavioral_notes = db.Column(db.Text)
@@ -353,6 +365,45 @@ class ItemOut(db.Model):
     status = db.Column(db.String(50), default='logged')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class InventoryItem(db.Model):
+    """NEW: Track all inventory items"""
+    id = db.Column(db.Integer, primary_key=True)
+    item_name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # 'cat', 'dog', 'general', 'medical', 'cleaning', 'food'
+    quantity = db.Column(db.Integer, default=0)
+    unit = db.Column(db.String(50))  # 'bags', 'bottles', 'boxes', etc.
+    location = db.Column(db.String(100))  # Where it's stored
+    reorder_point = db.Column(db.Integer)  # Alert when below this
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    transactions = db.relationship('InventoryTransaction', backref='item', lazy=True)
+    
+    @property
+    def is_low_stock(self):
+        """Check if item is at or below reorder point"""
+        if self.reorder_point is None:
+            return False
+        return self.quantity <= self.reorder_point
+
+class InventoryTransaction(db.Model):
+    """NEW: Track all inventory changes (in/out)"""
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    transaction_type = db.Column(db.String(20), nullable=False)  # 'in' or 'out'
+    quantity = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(100))  # 'donation', 'purchase', 'adoption', 'used', 'waste'
+    reference_type = db.Column(db.String(50))  # 'donation', 'animal', 'item_out', etc.
+    reference_id = db.Column(db.Integer)  # ID of related record
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship('User', backref='inventory_transactions')
 
 class MaintenanceTicket(db.Model):
     """Maintenance and project tracking"""
