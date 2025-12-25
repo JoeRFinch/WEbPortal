@@ -22,6 +22,9 @@
                         <a href="{{ url_for('phone_logs') }}">Phone Calls</a>
                         <a href="{{ url_for('donations') }}">Donations</a>
                         <a href="{{ url_for('items_out') }}">Items Out</a>
+                        {% if current_user.has_permission('view_inventory') %}
+                        <a href="{{ url_for('inventory') }}">Inventory</a>
+                        {% endif %}
                     </div>
                 </li>
                 {% if current_user.role in ['admin', 'management', 'board'] %}
