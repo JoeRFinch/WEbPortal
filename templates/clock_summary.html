@@ -3,13 +3,15 @@
 {% block content %}
 <h2>Time Clock - All Users Summary</h2>
 
-<p class="help-text">Click on any user to view their detailed time entries.</p>
+<p class="help-text">Click on any user to view their detailed time entries. Hours are separated by type: paid (employee/maintenance) vs unpaid (volunteer).</p>
 
 <table class="data-table">
     <thead>
         <tr>
             <th>Name</th>
-            <th>Role</th>
+            <th>Primary Role</th>
+            <th style="background-color: #d4edda;">Paid Hours<br><span style="font-size: 0.8rem; font-weight: normal;">(Employee + Maintenance)</span></th>
+            <th style="background-color: #fff3cd;">Volunteer Hours<br><span style="font-size: 0.8rem; font-weight: normal;">(Unpaid)</span></th>
             <th>Total Hours</th>
             <th>Total Entries</th>
             <th>Actions</th>
@@ -22,6 +24,17 @@
             <td>
                 <span class="role-badge role-{{ summary.role }}">{{ summary.role.title() }}</span>
             </td>
+            <td style="background-color: #e8f5e9;">
+                <strong style="color: #27ae60;">{{ '%.2f'|format(summary.paid_hours if summary.paid_hours else 0) }} hrs</strong>
+                <br><span style="font-size: 0.8rem; color: #7f8c8d;">
+                    {% if summary.employee_hours %}E: {{ '%.2f'|format(summary.employee_hours) }}{% endif %}
+                    {% if summary.employee_hours and summary.maintenance_hours %} | {% endif %}
+                    {% if summary.maintenance_hours %}M: {{ '%.2f'|format(summary.maintenance_hours) }}{% endif %}
+                </span>
+            </td>
+            <td style="background-color: #fff8e1;">
+                <strong style="color: #f39c12;">{{ '%.2f'|format(summary.volunteer_hours if summary.volunteer_hours else 0) }} hrs</strong>
+            </td>
             <td><strong>{{ '%.2f'|format(summary.total_hours if summary.total_hours else 0) }} hrs</strong></td>
             <td>{{ summary.total_entries or 0 }}</td>
             <td onclick="event.stopPropagation()">
@@ -29,21 +42,36 @@
             </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align: center;">No users in system</td></tr>
+        <tr><td colspan="7" style="text-align: center;">No users in system</td></tr>
         {% endfor %}
     </tbody>
 </table>
 
 <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
     <h3>Summary Statistics</h3>
-    <p><strong>Total Users:</strong> {{ users_summary|length }}</p>
-    <p><strong>Total Hours (All Users):</strong> 
-        {% set total = namespace(hours=0) %}
-        {% for summary in users_summary %}
-            {% set total.hours = total.hours + (summary.total_hours if summary.total_hours else 0) %}
-        {% endfor %}
-        {{ '%.2f'|format(total.hours) }} hours
-    </p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.875rem;">Total Users</p>
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #2c3e50;">{{ users_summary|length }}</p>
+        </div>
+        <div style="background-color: #e8f5e9; padding: 1rem; border-radius: 4px;">
+            <p style="margin: 0; color: #27ae60; font-size: 0.875rem; font-weight: bold;">💰 Total Paid Hours</p>
+            {% set totals = namespace(paid=0, volunteer=0) %}
+            {% for summary in users_summary %}
+                {% set totals.paid = totals.paid + (summary.paid_hours if summary.paid_hours else 0) %}
+                {% set totals.volunteer = totals.volunteer + (summary.volunteer_hours if summary.volunteer_hours else 0) %}
+            {% endfor %}
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #27ae60;">{{ '%.2f'|format(totals.paid) }} hrs</p>
+        </div>
+        <div style="background-color: #fff8e1; padding: 1rem; border-radius: 4px;">
+            <p style="margin: 0; color: #f39c12; font-size: 0.875rem; font-weight: bold;">❤️ Total Volunteer Hours</p>
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #f39c12;">{{ '%.2f'|format(totals.volunteer) }} hrs</p>
+        </div>
+        <div>
+            <p style="margin: 0; color: #7f8c8d; font-size: 0.875rem;">Total Hours (All Types)</p>
+            <p style="margin: 0; font-size: 1.5rem; font-weight: bold; color: #2c3e50;">{{ '%.2f'|format(totals.paid + totals.volunteer) }} hrs</p>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -57,6 +85,10 @@
     background-color: #e7d5ff;
     color: #5a1e8a;
 }
+.role-management {
+    background-color: #dcd6f7;
+    color: #4a148c;
+}
 .role-employee {
     background-color: #cfe2ff;
     color: #084298;
@@ -64,6 +96,10 @@
 .role-volunteer {
     background-color: #d4edda;
     color: #155724;
+}
+.role-maintenance {
+    background-color: #fff3cd;
+    color: #856404;
 }
 .btn-small {
     padding: 0.25rem 0.75rem;
